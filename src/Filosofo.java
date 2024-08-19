@@ -1,51 +1,45 @@
-/*Cada filosofo representa um thread em nosso sistema. No java, para criar uma
-nova thread podemos criar uma subclasse da superclasse de mesmo nome.
-* */
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Filosofo extends Thread {
     final static int QUANTUM_MAX = 100;
-    Mesa mesa;
-    int pidFilosofo;
+    private final Mesa mesa;
+    private final int idFilosofo;
 
-    public Filosofo(String nome, Mesa mesadejantar, int pidFilosofo) {
+    public Filosofo(String nome, Mesa mesa, int idFilosofo) {
         super(nome);
-        this.mesa = mesadejantar;
-        this.pidFilosofo = pidFilosofo;
+        this.mesa = mesa;
+        this.idFilosofo = idFilosofo;
     }
 
-    /*
-    Quando a thread é executada esse método é invocado. Basicamente, ele contem as
-    instruções que a thread deve executar.
-
-    - Chamado pelo método start(), visto que a chamada run() pode causar problemas.
-    */
+    @Override
     public void run() {
-        int quantum = 0;
         while (true) {
-            quantum = (int) (Math.random() * QUANTUM_MAX);
+            int quantum = ThreadLocalRandom.current().nextInt(QUANTUM_MAX);
             pensar(quantum);
 
-            mesa.pegarHashis(pidFilosofo);
-            quantum = (int) (Math.random() * QUANTUM_MAX);
+            mesa.pegarHashis(idFilosofo);
+            quantum = ThreadLocalRandom.current().nextInt(QUANTUM_MAX);
 
             comer(quantum);
-            mesa.retornarHashis(pidFilosofo);
+            mesa.retornarHashis(idFilosofo);
         }
     }
 
-    public void pensar(int tempo) {
+    private void pensar(int tempo) {
         try {
-            sleep(tempo);
+            Thread.sleep(tempo);
         } catch (InterruptedException e) {
-            System.out.println("O Filófoso pensou em demasia");
+            System.out.println(getName() + " pensou em demasia");
+            Thread.currentThread().interrupt(); // Preserva o estado de interrupção da thread
         }
     }
 
-    public void comer(int tempo) {
+    private void comer(int tempo) {
         try {
-            sleep(tempo);
+            Thread.sleep(tempo);
         } catch (InterruptedException e) {
-            System.out.println("O Filósofo comeu em demasia");
+            System.out.println(getName() + " comeu em demasia");
+            Thread.currentThread().interrupt(); // Preserva o estado de interrupção da thread
         }
     }
 }

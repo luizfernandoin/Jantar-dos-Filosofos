@@ -1,13 +1,14 @@
-public class Mesa
-{
-    final static int PENSANDO = 1;
-    final static int COMENDO = 2;
-    final static int FOME = 3;
+public class Mesa {
+    enum Estado {
+        PENSANDO, COMENDO, FOME,
+    }
+
     final static int NR_FILOSOFOS = 5;
     final static int PRIMEIRO_FILOSOFO = 0;
     final static int ULTIMO_FILOSOFO = NR_FILOSOFOS - 1;
-    boolean[] hashis = new boolean[NR_FILOSOFOS];
-    int[] filosofos = new int[NR_FILOSOFOS];
+
+    boolean[] hashis = new boolean[NR_FILOSOFOS]; //false -> ocupado; true -> desocupado
+    Estado[] filosofos = new Estado[NR_FILOSOFOS];
     int[] tentativas = new int[NR_FILOSOFOS];
 
     public Mesa()
@@ -15,146 +16,98 @@ public class Mesa
         for (int i = 0; i < 5; i++)
         {
             hashis[i] = true;
-            filosofos[i] = PENSANDO;
+            filosofos[i] = Estado.PENSANDO;
             tentativas[i] = 0;
         }
     }
 
-    public synchronized void pegarHashis (int filosofo)
-    {
-        filosofos[filosofo] = FOME;
-        while (filosofos[aEsquerda(filosofo)] == COMENDO || filosofos[aDireita(filosofo)] == COMENDO)
-        {
-            try
-            {
-                tentativas[filosofo]++;
+    public synchronized void pegarHashis (int idFilosofo) {
+        filosofos[idFilosofo] = Estado.FOME;
+        while (filosofos[aEsquerda(idFilosofo)] == Estado.COMENDO ||
+                filosofos[aDireita(idFilosofo)] == Estado.COMENDO) {
+            try {
+                tentativas[idFilosofo]++;
+                if (tentativas[idFilosofo] > 10) {
+                    System.out.println("O Filósofo " + idFilosofo + " morreu devido a starvation");
+                    return;
+                }
                 wait();
             }
-            catch (InterruptedException e)
-            {
+            catch (InterruptedException e) {
+                System.err.printf("Erro ao esperar para o filósofo %d: %s%n", idFilosofo, e.getMessage());
             }
         }
-        System.out.println("O Filósofo morreu devido a starvation");
-        tentativas[filosofo] = 0;
-        hashis[garfoEsquerdo(filosofo)] = false;
-        hashis[garfoDireito(filosofo)] = false;
-        filosofos[filosofo] = COMENDO;
+
+        tentativas[idFilosofo] = 0;
+        hashis[garfoEsquerdo(idFilosofo)] = false;
+        hashis[garfoDireito(idFilosofo)] = false;
+        filosofos[idFilosofo] = Estado.COMENDO;
+
         imprimeEstadosFilosofos();
         imprimeHashis();
         imprimeTentativas();
     }
 
-    public synchronized void retornarHashis (int filosofo)
-    {
-        hashis[garfoEsquerdo(filosofo)] = true;
-        hashis[garfoDireito(filosofo)] = true;
-        if (filosofos[aEsquerda(filosofo)] == FOME || filosofos[aDireita(filosofo)] == FOME)
-        {
+    public synchronized void retornarHashis (int idFilosofo) {
+        hashis[garfoEsquerdo(idFilosofo)] = true;
+        hashis[garfoDireito(idFilosofo)] = true;
+
+        if (filosofos[aEsquerda(idFilosofo)] == Estado.FOME ||
+                filosofos[aDireita(idFilosofo)] == Estado.FOME) {
             notifyAll();
         }
-        filosofos[filosofo] = PENSANDO;
+
+        filosofos[idFilosofo] = Estado.PENSANDO;
+
         imprimeEstadosFilosofos();
         imprimeHashis();
         imprimeTentativas();
     }
 
-    public int aDireita (int filosofo)
-    {
-        int direito;
-        if (filosofo == ULTIMO_FILOSOFO)
-        {
-            direito = PRIMEIRO_FILOSOFO;
-        }
-        else
-        {
-            direito = filosofo + 1;
-        }
-        return direito;
+    public int aDireita (int filosofo) {
+        return (filosofo == ULTIMO_FILOSOFO) ? PRIMEIRO_FILOSOFO : filosofo + 1;
     }
 
-    public int aEsquerda (int filosofo)
-    {
-        int esquerdo;
-        if (filosofo == PRIMEIRO_FILOSOFO)
-        {
-            esquerdo = ULTIMO_FILOSOFO;
-        }
-        else
-        {
-            esquerdo = filosofo - 1;
-        }
-        return esquerdo;
+    public int aEsquerda (int filosofo) {
+        return (filosofo == PRIMEIRO_FILOSOFO) ? ULTIMO_FILOSOFO : filosofo - 1;
     }
 
-    public int garfoEsquerdo (int filosofo)
-    {
-        int garfoEsquerdo = filosofo;
-        return garfoEsquerdo;
+    public int garfoEsquerdo (int filosofo) {
+        return filosofo;
     }
 
-    public int garfoDireito (int filosofo)
-    {
-        int garfoDireito;
-        if (filosofo == ULTIMO_FILOSOFO)
-        {
-            garfoDireito = 0;
-        }
-        else
-        {
-            garfoDireito = filosofo + 1;
-        }
-        return garfoDireito;
+    public int garfoDireito (int idFilosofo) {
+        return (idFilosofo == ULTIMO_FILOSOFO) ? 0 : idFilosofo + 1;
     }
 
-    public void imprimeEstadosFilosofos ()
-    {
-        String texto = "*";
-        System.out.print("Filósofos = [ ");
-        for (int i = 0; i < NR_FILOSOFOS; i++)
-        {
-            switch (filosofos[i])
-            {
-                case PENSANDO :
-                    texto = "PENSANDO";
-                    break;
-                case FOME :
-                    texto = "FOME";
-                    break;
-                case COMENDO :
-                    texto = "COMENDO";
-                    break;
-            }
-            System.out.print(texto + " ");
+    public void imprimeEstadosFilosofos() {
+        System.out.println("\nEstado dos Filósofos:");
+        for (int i = 0; i < NR_FILOSOFOS; i++) {
+            String estado = switch (filosofos[i]) {
+                case Estado.PENSANDO -> "Pensando";
+                case Estado.FOME -> "Com Fome";
+                case Estado.COMENDO -> "Comendo";
+                default -> "Desconhecido";
+            };
+            System.out.printf("Filósofo %d: %s%n", i, estado);
         }
-        System.out.println("]");
+        System.out.println();
     }
 
-    public void imprimeHashis ()
-    {
-        String garfo = "*";
-        System.out.print("Hashis = [ ");
-        for (int i = 0; i < NR_FILOSOFOS; i++)
-        {
-            if (hashis[i])
-            {
-                garfo = "LIVRE";
-            }
-            else
-            {
-                garfo = "OCUPADO";
-            }
-            System.out.print(garfo + " ");
+    public void imprimeHashis() {
+        System.out.println("Estado dos Hashis:");
+        for (int i = 0; i < NR_FILOSOFOS; i++) {
+            String status = hashis[i] ? "Livre" : "Ocupado";
+            System.out.printf("Hashi %d: %s%n", i, status);
         }
-        System.out.println("]");
+        System.out.println();
     }
 
-    public void imprimeTentativas ()
-    {
-        System.out.print("Tentou comer = [ ");
-        for (int i = 0; i < NR_FILOSOFOS; i++)
-        {
-            System.out.print(filosofos[i] + " ");
+    public void imprimeTentativas() {
+        System.out.println("Tentativas de Comer:");
+        for (int i = 0; i < NR_FILOSOFOS; i++) {
+            System.out.printf("Filósofo %d tentou %d vezes%n", i, tentativas[i]);
         }
-        System.out.println("]");
+        System.out.println();
     }
 }
